@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Library Page</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        const API_URL = 'http://127.0.0.1:5000';  // Replace with your Flask server URL
+
+        function fetchBooks() {
+            axios.get(`${API_URL}/books`, { withCredentials: true })
+                .then(response => {
+                    const books = response.data;
+                    const bookList = document.getElementById("bookList");
+                    bookList.innerHTML = books.map(book => `
+                        <li>
+                            ${book.name} by ${book.author} 
+                            <button onclick="borrowBook(${book.id})" ${book.disabled ? 'disabled' : ''}>Borrow</button>
+                        </li>`).join("");
+                })
+                .catch(error => {
+                    console.error('Error fetching books:', error);
+                });
+        }
+
+        function fetchBorrowedBooks() {
+            axios.get(`${API_URL}/borrowed_books_by_customer`, { withCredentials: true })
+                .then(response => {
+                    const borrowedBooks = response.data;
+                    const borrowedBooksList = document.getElementById("borrowedBooksList");
+                    borrowedBooksList.innerHTML = borrowedBooks.map(borrowedBook => `
+                        <li>
+                            ${borrowedBook.book_name} by ${borrowedBook.author} 
+                            <button onclick="returnBook(${borrowedBook.borrowed_book_id})">Return Book</button>
+                        </li>`).join("");
+                })
+                .catch(error => {
+                    console.error('Error fetching borrowed books:', error);
+                });
+        }
+
+        function borrowBook(bookId) {
+            axios.post(`${API_URL}/borrow/${bookId}`, {}, { withCredentials: true })
+                .then(response => {
+                    alert(response.data.message);
+                    fetchBooks();
+                    fetchBorrowedBooks();
+                })
+                .catch(error => {
+                    alert("Failed to borrow book: " + error.response.data.error);
+                });
+        }
+
+        function returnBook(borrowedBookId) {
+            axios.post(`${API_URL}/return/${borrowedBookId}`, {}, { withCredentials: true })
+                .then(response => {
+                    alert(response.data.message);
+                    fetchBooks();
+                    fetchBorrowedBooks();
+                })
+                .catch(error => {
+                    alert("Failed to return book: " + error.response.data.error);
+                });
+        }
+
+        function logout() {
+            axios.post(`${API_URL}/logout`, {}, { withCredentials: true })
+                .then(response => {
+                    alert("Logged out successfully");
+                    window.location.href = 'index.html';  // Redirect to login/register page on logout
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                });
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            axios.get(`${API_URL}/user_info`, { withCredentials: true })
+                .then(response => {
+                    const userName = response.data.user_name;
+                    document.getElementById("welcomeMessage").innerText = `Welcome, ${userName}`;
+                })
+                .catch(error => {
+                    console.error('Error fetching user info:', error);
+                });
+
+            fetchBooks();
+            fetchBorrowedBooks();
+        });
+    </script>
+</head>
+<body>
+    <h1 id="welcomeMessage">Welcome!</h1>
+    <button onclick="logout()">Logout</button>
+    <h2>Available Books</h2>
+    <ul id="bookList"></ul>
+    <h2>Currently Borrowed Books by You</h2>
+    <ul id="borrowedBooksList"></ul>
+</body>
+</html>

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Page</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        const API_URL = 'http://127.0.0.1:5000';  // Replace with your Flask server URL
+
+        function addBook() {
+            const name = document.getElementById('bookName').value;
+            const author = document.getElementById('bookAuthor').value;
+
+            axios.post(`${API_URL}/add_book`, { name, author }, { withCredentials: true })
+                .then(response => {
+                    alert(response.data.message);
+                    fetchBooks();
+                })
+                .catch(error => {
+                    alert("Failed to add book: " + error.response.data.error);
+                });
+        }
+
+        function fetchBooks() {
+            axios.get(`${API_URL}/books`, { withCredentials: true })
+                .then(response => {
+                    const books = response.data;
+                    const bookList = document.getElementById("bookList");
+                    bookList.innerHTML = books.map(book => `
+                        <li>
+                            ${book.name} by ${book.author} 
+                            ${book.disabled ? '(Disabled)' : ''}
+                            <button onclick="disableBook(${book.id})" ${book.disabled || book.borrowed ? 'disabled' : ''}>Disable</button>
+                        </li>`).join("");
+                })
+                .catch(error => {
+                    console.error('Error fetching books:', error);
+                });
+        }
+
+        function fetchBorrowedBooks() {
+            axios.get(`${API_URL}/admin/borrowed_books`, { withCredentials: true })
+                .then(response => {
+                    const borrowedBooks = response.data;
+                    const borrowedBooksList = document.getElementById("borrowedBooksList");
+                    borrowedBooksList.innerHTML = borrowedBooks.map(borrowedBook => `
+                        <li>
+                            ${borrowedBook.book_name} by ${borrowedBook.author} - Borrowed by: ${borrowedBook.borrowed_by}
+                        </li>`).join("");
+                })
+                .catch(error => {
+                    console.error('Error fetching borrowed books:', error);
+                });
+        }
+
+        function disableBook(bookId) {
+    axios.post(`${API_URL}/admin/disable_book/${bookId}`, {}, { withCredentials: true })
+        .then(response => {
+            alert(response.data.message);
+            fetchBooks();  // Update book list after disabling
+            fetchBorrowedBooks();  // Update borrowed books list
+        })
+        .catch(error => {
+            alert("Failed to disable book: " + error.response.data.error);
+        });
+}
+
+        function logout() {
+            axios.post(`${API_URL}/logout`, {}, { withCredentials: true })
+                .then(response => {
+                    alert("Logged out successfully");
+                    window.location.href = 'index.html';  // Redirect to login/register page on logout
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                });
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            fetchBooks();
+            fetchBorrowedBooks();
+        });
+
+        function disableCustomer(customerId) {
+            axios.post(`${API_URL}/disable_customer/${customerId}`, {}, { withCredentials: true })
+                .then(response => {
+                    alert(response.data.message);
+                    fetchCustomers();
+                })
+                .catch(error => {
+                    alert("Failed to disable customer: " + error.response.data.error);
+                });
+        }
+
+        function fetchCustomers() {
+            axios.get(`${API_URL}/admin_customers`, { withCredentials: true })
+                .then(response => {
+                    const customers = response.data;
+                    const customerList = document.getElementById("customerList");
+                    customerList.innerHTML = customers.map(customer => `
+                        <li>
+                            ${customer.name}
+                            <button onclick="disableCustomer(${customer.id})">Disable</button>
+                        </li>`).join("");
+                })
+                .catch(error => {
+                    console.error('Error fetching customers:', error);
+                });
+        }
+        fetchCustomers();
+    </script>
+</head>
+<body>
+    <h1>Welcome, Admin!</h1>
+    <button onclick="logout()">Logout</button>
+    <div>
+        <h2>Add New Book</h2>
+        <input type="text" id="bookName" placeholder="Name" required>
+        <input type="text" id="bookAuthor" placeholder="Author" required>
+        <button onclick="addBook()">Add Book</button>
+    </div>
+    <h2>Books</h2>
+    <ul id="bookList"></ul>
+    <h2>Borrowed Books</h2>
+    <ul id="borrowedBooksList"></ul>
+    <div>
+        <h2>Active Customers</h2>
+        <ul id="customerList"></ul>
+    </div>
+</body>
+</html>
